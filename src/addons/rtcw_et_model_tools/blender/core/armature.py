@@ -60,7 +60,7 @@ def read_pose_bone_lr(armature_object, bone_name, frame_start=0, frame_end=0):
         action = armature_object.animation_data.action
         if action:
 
-            fcurves = action.fcurves
+            fcurves = blender_util_m._get_fcurves(armature_object)
             if not fcurves:
 
                 reporter_m.warning("Action found with no fcurves on armature"
@@ -224,19 +224,22 @@ def _write_pose_bone_lr(armature_object, bone_name, locations, rotations,
         if not armature_object.animation_data.action:
             armature_object.animation_data.action = \
                 bpy.data.actions.new(name=armature_object.name)
+        
+        fcurves = blender_util_m._get_fcurves(armature_object)
+        if not fcurves is None:        
+            #for fcurve in channelbag.fcurves:
+            #    print(fcurve.data_path, fcurve.array_index)
 
-        fcurves = armature_object.animation_data.action.fcurves
+            # locations
+            data_path = fcurve_m.DP_BONE_LOCATION.format(bone_name)
+            fcurve_m.write_locations(fcurves, data_path, locations)
 
-        # locations
-        data_path = fcurve_m.DP_BONE_LOCATION.format(bone_name)
-        fcurve_m.write_locations(fcurves, data_path, locations)
-
-        # rotations
-        fcurve_m.write_rotation_matrices(fcurves,
-                                         rotations,
-                                         "QUATERNION",
-                                         frame_start,
-                                         bone_name)
+            # rotations
+            fcurve_m.write_rotation_matrices(fcurves,
+                                            rotations,
+                                            "QUATERNION",
+                                            frame_start,
+                                            bone_name)
 
     else:  # nothing to write
 
@@ -354,6 +357,8 @@ def _animate_bones(mdi_skeleton, root_frame, armature_object):
     reporter_m.debug("Animating bones DONE (time={})".format(time))
 
 def _add_edit_bones(mdi_skeleton, root_frame, armature_object):
+    if  bpy.app.version >= (4, 0, 0):
+        default_bcoll = armature_object.data.collections.new("Bones")
 
     timer = timer_m.Timer()
     reporter_m.debug("Adding edit bones ...")
@@ -369,7 +374,10 @@ def _add_edit_bones(mdi_skeleton, root_frame, armature_object):
         edit_bone.head = (0, 0, 0)
         edit_bone.tail = (0, 1, 0)
         edit_bone.use_connect = False
-        edit_bone.use_inherit_scale = True
+        if  bpy.app.version >= (4, 0, 0):
+            edit_bone.inherit_scale = 'FULL'
+        else:
+            edit_bone.use_inherit_scale = True
         edit_bone.use_local_location = True
         edit_bone.use_inherit_rotation = True
 
@@ -380,6 +388,8 @@ def _add_edit_bones(mdi_skeleton, root_frame, armature_object):
             mathutils.Matrix.Translation(bind_pose_location) @ \
                 bind_pose_orientation.to_4x4()
         edit_bone.matrix = bind_pose_matrix
+        if  bpy.app.version >= (4, 0, 0):
+            default_bcoll.assign(edit_bone)
 
     # set parent-child-relationship
     for mdi_bone in mdi_skeleton.bones:

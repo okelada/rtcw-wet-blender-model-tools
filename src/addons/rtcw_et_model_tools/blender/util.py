@@ -23,6 +23,7 @@
 
 import bpy
 import mathutils
+from bpy_extras import anim_utils
 
 import rtcw_et_model_tools.mdi.mdi as mdi_m
 import rtcw_et_model_tools.blender.core.armature as armature_m
@@ -284,6 +285,28 @@ class Transform:
                     self.rots[num_frame] = cfr_ls
 
 
+def _get_fcurves(armature_object):
+    fcurves = None
+    if  bpy.app.version >= (4, 4, 0):
+        if armature_object.animation_data.action_slot is None:
+            if armature_object.animation_data.action_suitable_slots:
+                armature_object.animation_data.action_slot = armature_object.animation_data.action_suitable_slots[0]
+            else:
+                slot = armature_object.animation_data.action.slots.new(id_type=armature_object.id_type, name=armature_object.name)
+                armature_object.animation_data.action_slot = slot
+
+        channelbag = anim_utils.animdata_get_channelbag_for_assigned_slot(armature_object.animation_data)
+        #channelbag = anim_utils.action_get_channelbag_for_slot(armature_object.animation_data.action, armature_object.animation_data.action_slot) 
+        
+        if channelbag is None:
+            channelbag = anim_utils.action_ensure_channelbag_for_slot(armature_object.animation_data.action, slot)
+        
+        fcurves = channelbag.fcurves
+    else:
+        fcurves = armature_object.animation_data.action.fcurves
+    return fcurves
+
+
 def build_transforms_ws(collection, frame_start, frame_end):
 
     transforms = []
@@ -508,7 +531,7 @@ def read_object_space_lrs(blender_object, frame_start=0, frame_end=0,
         action = blender_object.animation_data.action
         if action:
 
-            fcurves = action.fcurves
+            fcurves = _get_fcurves(blender_object)
             if not fcurves:
 
                 reporter_m.warning("Action found with no fcurves on blender"
@@ -662,7 +685,7 @@ def write_object_space_lrs(blender_object, locations=None, rotations=None,
         num_frames = len(locations)
         if num_frames > 1:
 
-            fcurves = blender_object.animation_data.action.fcurves
+            fcurves = _get_fcurves(blender_object)
             data_path = fcurve_m.DP_LOCATION
             fcurve_m.write_locations(fcurves,
                                      data_path,
@@ -682,7 +705,7 @@ def write_object_space_lrs(blender_object, locations=None, rotations=None,
         num_frames = len(rotations)
         if num_frames > 1:
 
-            fcurves = blender_object.animation_data.action.fcurves
+            fcurves = _get_fcurves(blender_object)
             data_path = fcurve_m.DP_QUATERNION
 
             quaternions = []
