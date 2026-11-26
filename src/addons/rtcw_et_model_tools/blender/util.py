@@ -349,10 +349,10 @@ def get_active_action_fcurves(blender_object):
     fcurves = None
 
     if blender_object.animation_data and \
-       blender_object.animation_data.action and \
-       blender_object.animation_data.action.fcurves:
+    blender_object.animation_data.action and \
+    blender_object.animation_data.action.fcurves:
 
-       fcurves = blender_object.animation_data.action.fcurves
+        fcurves = _get_fcurves(blender_object)
 
     return fcurves
 
@@ -736,7 +736,7 @@ def write_object_space_lrs(blender_object, locations=None, rotations=None,
         num_frames = len(scales)
         if num_frames > 1:
 
-            fcurves = blender_object.animation_data.action.fcurves
+            fcurves = _get_fcurves(blender_object)
             data_path = fcurve_m.DP_SCALE
             fcurve_m.write_scales(fcurves, data_path, scales, frame_start)
 
@@ -754,7 +754,7 @@ def write_object_space_lrs(blender_object, locations=None, rotations=None,
 
     # if needs_animation_data:
 
-    #     fcurves = blender_object.animation_data.action.fcurves
+    #     fcurves = _get_fcurves(blender_object)
     #     fcurve_m.set_interpolation_mode(fcurves, 'LINEAR')
 
 def matrix_to_axis_angle(matrix):
